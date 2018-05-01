@@ -150,8 +150,117 @@ jr $ra
 ###############################################################
 conv_filter:
 ############################### Part 2: your code begins here ##
+mult $s0, $s0
+mflo $t8 #Our upward increment checker
+move $t0, $a0 # Input buffer ptr
+move $t1, $a1 # Output buffer ptr
+move $t2, $a2 # Kernel ptr
+move $t3, $a3 # Our normalization parameter, divide conv result by this
 
+li $t9, 0x00 # total incr counter
+li $t4, 0x00 # row for image
+li $t5, 0x00 # col for image
 
+iter_pixels_of_input:
+bge $t9, $t8, finished_pixels
+lb $s1, ($t0)
+move $s7, $t0
+addi $t0, $t0, 0x01 # Inc input ptr
+addi $t9, $t9, 0x01 # Inc counter
+
+# If it's an edge pixel the output image just recieves the value 
+# of the input pixel and we move on
+beq $t4, $s0, edge_pixel
+beq $t4, $zero, edge_pixel
+beq $t5, $s0, edge_pixel
+beq $t5, $zero, edge_pixel
+
+#Here it's not an edge pixel, we do the kernel convolution
+sub $s2, $s7, $s0
+
+addi $s2, $s2, -0x02 
+mult ($s2), ($t2) #Top left TODO: Fix this
+mflo $s6
+
+addi $t2, $t2, 0x01
+addi $s2, $s2, 0x01
+
+mult ($s2), ($t2) #Middle left TODO: Fix this
+move $s5, $s6
+mflo $s6
+add $s5, $s5, $s6
+
+addi $t2, $t2, 0x01
+addi $s2, $s2, 0x01
+
+mult ($s2), ($t2) #bottom left TODO: Fix this
+mflo $s6
+add $s5, $s5, $s6
+
+addi $t2, $t2, 0x01
+
+addi $s2, $s7, 0x01 #Immediate Left TODO: Fix this
+mult ($s2), ($t2)
+mflo $s6
+add $s5, $s5, $s6
+
+addi $t2, $t2, 0x01
+
+move $s2, $s7 #Center, valid pixel location TODO: Fix this
+mult ($s2), ($t2)
+mflo $s6
+add $s5, $s5, $s6
+
+addi $t2, $t2, 0x01
+
+addi $s2, $s7, 0x01 #Immediate right TODO: Fix this
+mult ($s2), ($t2)
+mflo $s6
+add $s5, $s5, $s6
+
+addi $t2, $t2, 0x01
+add $s2, $s7, $s0 # Bottom left TODO: Fix this
+mult ($s2), ($t2)
+mflo $s6
+add $s5, $s5, $s6
+
+addi $t2, $t2, 0x01 
+addi $s2, $s2, 0x01 # Bottom middle TODO: Fix this
+mult ($s2), ($t2)
+mflo $s6
+add $s5, $s5, $s6
+
+addi $t2, $t2, 0x01
+addi $s2, $s2, 0x01 # Bottom right TODO: Fix this
+mult ($s2), ($t2)
+mflo $s6
+add $s5, $s5, $s6
+
+move $t2, $a2 #Reset kernel iter 
+div $s5, $t3
+mflo $s5
+
+sb $s5, ($t1)
+addi $t1, $t1, 0x01
+b iter_pixels_of_input
+
+edge_pixel:
+sb $s1, ($t1)
+addi $t1, $t1, 0x01
+beq $t5, $s0, reset_col_mov_row
+beq $t4, $s0, iter_col
+b iter_pixels_of_input
+
+reset_col_mov_row:
+li $t5, 0x00
+addi $t4, $t4, 0x01
+b iter_pixels_of_input
+
+iter_col:
+addi $t5, $t5, 0x01
+b iter_pixels_of_input
+
+finished_pixels:
 ############################### Part 2: your code ends here  ##
 jr $ra
 ###############################################################
